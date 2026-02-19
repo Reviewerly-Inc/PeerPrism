@@ -14,7 +14,7 @@ pip install openreview-py
 python fetch_reviews_from_openreview.py
 ```
 
-**Output:** `data/ICLR2021.jsonl`, `data/ICLR2022.jsonl`, … `data/NeurIPS2024.jsonl`. Each line is one paper with `forum_id`, `paper_index`, `pdf_url`, `title`, `decision`, and `reviews` (list of `{id, text, date}`). Reviews whose text starts with `rebuttal:` (author rebuttals) are excluded so counts align with the human_reviews reference set.
+**Output:** `data/ICLR2021.jsonl`, `data/ICLR2022.jsonl`, … `data/NeurIPS2024.jsonl`. Each line is one paper with `forum_id`, `paper_index`, `pdf_url`, `title`, `decision`, and `reviews`. Each review has `id`, `text` (full flattened string), **`content`** (dict of field name → string, e.g. `review`, `summary`, `strengths` — same keys as OpenReview per venue/year, so you can map to `TEXT_FIELDS_BY_VENUE_YEAR`), and `date`. Reviews whose text starts with `rebuttal:` are excluded.
 
 **Options:**
 - `--data-dir DIR` — output directory (default: `data/`)

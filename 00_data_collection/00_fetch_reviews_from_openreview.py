@@ -17,6 +17,8 @@ Usage:
 Output (under 00_data_collection/data/ by default):
     ICLR2021.jsonl, ICLR2022.jsonl, ... NeurIPS2024.jsonl
     Each line: one paper with forum_id, paper_index, pdf_url, title, decision, reviews[].
+    Each review has: id, text (full flattened string), content (dict of field name -> string,
+    e.g. review, summary, strengths), date. The content keys match OpenReview per venue/year.
 """
 
 import argparse
@@ -43,24 +45,41 @@ def get_content_value(content: dict, key: str, default=None):
     return val
 
 
-def build_review_text(content: dict) -> str:
-    """Build a single review text from note content (rating, review body, etc.)."""
-    if not content:
+def _content_value_to_string(v) -> str:
+    """Turn a single content field value (API v1 or v2) into a string."""
+    if v is None:
         return ""
-    parts = []
+    if isinstance(v, list):
+        if v and isinstance(v[0], dict) and "value" in v[0]:
+            return ", ".join(str(x.get("value", x)) for x in v)
+        return ", ".join(str(x) for x in v)
+    if isinstance(v, dict) and "value" in v:
+        return str(v["value"])
+    return str(v)
+
+
+def content_to_flat_dict(content: dict) -> dict:
+    """
+    Normalize OpenReview note content to a plain dict of key -> string.
+    Use this so each review can be saved with a 'content' dict matching
+    venue/year field names (review, summary, strengths, etc.).
+    """
+    if not content:
+        return {}
+    out = {}
     for k, v in content.items():
         if v is None:
             continue
-        if isinstance(v, list):
-            if v and isinstance(v[0], dict) and "value" in v[0]:
-                parts.append(f"{k}: {', '.join(str(x.get('value', x)) for x in v)}")
-            else:
-                parts.append(f"{k}: {', '.join(str(x) for x in v)}")
-        elif isinstance(v, dict) and "value" in v:
-            parts.append(f"{k}: {v['value']}")
-        else:
-            parts.append(f"{k}: {v}")
-    return "\n".join(parts)
+        s = _content_value_to_string(v)
+        if s:
+            out[k] = s
+    return out
+
+
+def build_review_text(content: dict) -> str:
+    """Build a single review text from note content (rating, review body, etc.)."""
+    flat = content_to_flat_dict(content)
+    return "\n".join(f"{k}: {v}" for k, v in flat.items())
 
 
 def is_review_note(invitation: str | list) -> bool:
@@ -237,7 +256,9 @@ def fetch_paper_and_reviews(client_v2, client_v1, forum_id: str):
             continue
         rid = r.get("id") or getattr(r, "id", "")
         cdate = r.get("cdate") or r.get("tcdate") or getattr(r, "cdate", None) or getattr(r, "tcdate", None)
-        reviews.append({"id": rid, "text": review_text, "date": cdate})
+        # content: dict of key -> string (review, summary, strengths, etc.) for venue/year field mapping
+        content_flat = content_to_flat_dict(c)
+        reviews.append({"id": rid, "text": review_text, "content": content_flat, "date": cdate})
 
     return {
         "forum_id": forum_id,
