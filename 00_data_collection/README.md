@@ -1,6 +1,29 @@
 # 00 – Data collection
 
-This folder holds artifacts needed to **reproduce data collection** for the PeerPrism dataset.
+This folder holds artifacts and scripts needed to **reproduce data collection** for the PeerPrism dataset.
+
+## Scripts
+
+### `fetch_reviews_from_openreview.py`
+
+Fetches each paper (by OpenReview forum ID) and its reviews from the OpenReview API. Writes one JSONL per venue+year under **`data/`**.
+
+**Usage:**
+```bash
+pip install openreview-py
+python fetch_reviews_from_openreview.py
+```
+
+**Output:** `data/ICLR2021.jsonl`, `data/ICLR2022.jsonl`, … `data/NeurIPS2024.jsonl`. Each line is one paper with `forum_id`, `paper_index`, `pdf_url`, `title`, `decision`, and `reviews` (list of `{id, text, date}`). Reviews whose text starts with `rebuttal:` (author rebuttals) are excluded so counts align with the human_reviews reference set.
+
+**Options:**
+- `--data-dir DIR` — output directory (default: `data/`)
+- `--forum-ids PATH` — path to forum IDs JSON (default: `forum_ids_by_venue_year.json`)
+- `--delay SECS` — seconds to wait between API requests (default: 0.5) to reduce rate limiting
+
+**API behaviour:** Tries OpenReview API v2 first; if no notes are returned (e.g. older venues like ICLR 2021), falls back to API v1. On rate-limit errors (429), retries with exponential backoff (up to 5 attempts).
+
+---
 
 ## `forum_ids_by_venue_year.json`
 
