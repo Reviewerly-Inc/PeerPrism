@@ -23,6 +23,15 @@ python fetch_reviews_from_openreview.py
 
 **API behaviour:** Tries OpenReview API v2 first; if no notes are returned (e.g. older venues like ICLR 2021), falls back to API v1. On rate-limit errors (429), retries with exponential backoff (up to 5 attempts).
 
+### `download_manuscript_pdfs.py`
+
+Downloads the manuscript PDF for each paper in the extracted data and saves it under **`data/manuscript_pdfs/{forum_id}.pdf`**. Uses `pdf_url` from the JSONL files (run `fetch_reviews_from_openreview.py` first).
+
+**Usage:** `python download_manuscript_pdfs.py [--data-dir DIR] [--delay SECS] [--force]`  
+Skips files that already exist unless `--force` is given. `--delay` (default 0.5) is the pause between downloads.
+
+**Requires:** `pip install requests`
+
 ---
 
 ## `forum_ids_by_venue_year.json`
