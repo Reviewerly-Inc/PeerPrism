@@ -1,0 +1,190 @@
+# Data root relative to PeerPrism repo root. Input: data/human_reviews, data/manuscript_markdowns. Output: data/synthetic_reviews
+data_root: "data"
+
+years:
+  - 2021
+  - 2022
+  - 2023
+  - 2024
+
+papers_per_year: 1  # or set e.g. 50 for a quick test
+
+llms:
+  - provider: openai
+    model: gpt-5
+  - provider: openai
+    model: o4-mini
+  - provider: google
+    model: gemini-2.5-flash
+  - provider: openrouter
+    model: anthropic/claude-haiku-4.5
+  - provider: openrouter
+    model: meta-llama/llama-4-scout
+  - provider: openrouter
+    model: deepseek/deepseek-r1
+
+
+api:
+  delay_seconds: 1.0
+  max_tokens: 2048
+  temperature: 0.7
+  timeout: 120
+  max_retries: 3
+
+
+# Manuscript: max chars to include (null or -1 = no limit)
+manuscript:
+  max_chars: null
+
+# Output: synthetic reviews saved under data_root/synthetic_reviews
+output:
+  synthetic_reviews_dir: "synthetic_reviews"
+
+
+review_output_schema_ICLR:
+  2021:
+    required_keys:
+      - review
+      - rating
+
+    # Optional but strongly recommended: constrain to dataset-known strings
+    rating_allowed:
+      - "10: Top 5% of accepted papers, seminal idea"
+      - "9: Top 15% of accepted papers, strong accept"
+      - "8: Top 50% of accepted papers, clear accept"
+      - "7: Good paper, accept"
+      - "6: Marginally above acceptance threshold"
+      - "5: Marginally below acceptance threshold"
+      - "4: Ok but not good enough, reject"
+      - "3: Clear reject"
+      - "2: Strong reject"
+      - "1: Trivial or wrong"
+
+  2022:
+    required_keys:
+      - summary_of_the_paper
+      - main_review
+      - summary_of_the_review
+      - recommendation
+
+    rating_allowed:
+      - "10: strong accept, should be highlighted at the conference."
+      - "8: accept, good submission"
+      - "6: marginally above the acceptance threshold."
+      - "5: marginally below the acceptance threshold."
+      - "3: reject, not good enough."
+      - "1: strong reject."
+
+  2023:
+    required_keys:
+      - summary_of_the_paper
+      - strength_and_weaknesses
+      - clarity_quality_novelty_and_reproducibility
+      - summary_of_the_review
+      - rating
+
+    rating_allowed:
+      - "10: strong accept, should be highlighted at the conference."
+      - "8: accept, good submission"
+      - "6: marginally above the acceptance threshold."
+      - "5: marginally below the acceptance threshold."
+      - "3: reject, not good enough."
+      - "1: strong reject."
+
+  2024:
+    required_keys:
+      - summary
+      - strength_and_weaknesses
+      - questions
+      - summary_of_the_review
+      - rating
+
+    rating_allowed:
+      - "10: strong accept, should be highlighted at the conference."
+      - "8: accept, good submission"
+      - "6: marginally above the acceptance threshold."
+      - "5: marginally below the acceptance threshold."
+      - "3: reject, not good enough."
+      - "1: strong reject."
+
+
+review_output_schema_NeurIPS:
+  2021:
+    required_keys:
+      - summary
+      - main_review
+      - limitations_and_societal_impact
+      - rating
+
+    rating_allowed:
+      - "10: Award quality"
+      - "9: Very Strong Accept"
+      - "8: Strong Accept"
+      - "7: Accept"
+      - "6: Weak Accept"
+      - "5: Borderline accept"
+      - "4: Borderline reject"
+      - "3: Reject"
+      - "2: Strong reject"
+      - "1: Very Strong Reject"
+
+  2022:
+    required_keys:
+      - summary
+      - strengths_and_weaknesses
+      - limitations
+      - questions
+      - rating
+
+    rating_allowed:
+      - "10: Award quality"
+      - "9: Very Strong Accept"
+      - "8: Strong Accept"
+      - "7: Accept"
+      - "6: Weak Accept"
+      - "5: Borderline accept"
+      - "4: Borderline reject"
+      - "3: Reject"
+      - "2: Strong reject"
+      - "1: Very Strong Reject"
+
+  2023:
+    required_keys:
+      - summary
+      - strengths_and_weaknesses
+      - limitations
+      - questions
+      - rating
+
+    rating_allowed:
+      - "10: Award quality"
+      - "9: Very Strong Accept"
+      - "8: Strong Accept"
+      - "7: Accept"
+      - "6: Weak Accept"
+      - "5: Borderline accept"
+      - "4: Borderline reject"
+      - "3: Reject"
+      - "2: Strong reject"
+      - "1: Very Strong Reject"
+
+  2024:
+    required_keys:
+      - summary
+      - strengths_and_weaknesses
+      - limitations
+      - questions
+      - rating
+
+    rating_allowed:
+      - "10: Award quality"
+      - "9: Very Strong Accept"
+      - "8: Strong Accept"
+      - "7: Accept"
+      - "6: Weak Accept"
+      - "5: Borderline accept"
+      - "4: Borderline reject"
+      - "3: Reject"
+      - "2: Strong reject"
+      - "1: Very Strong Reject"
+

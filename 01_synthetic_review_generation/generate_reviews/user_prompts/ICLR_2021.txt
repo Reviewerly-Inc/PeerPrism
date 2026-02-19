@@ -1,0 +1,15 @@
+Write a fresh peer review for the following manuscript.
+Do not generate more than 300 words for each field.
+
+REQUIRED_KEYS:
+{REQUIRED_KEYS_JSON_ARRAY}
+
+Field requirements:
+- "review": A complete ICLR-style review with strengths, weaknesses, and actionable suggestions. Be specific and grounded in the manuscript.
+- "rating": Choose ONE EXACT string from RATING_ALLOWED. Rate based on the full review. The rating MUST be consistent with the arguments in your review; if borderline, choose the closest marginal option.
+
+RATING_ALLOWED:
+{RATING_ALLOWED_JSON_ARRAY}
+
+Manuscript:
+{manuscript_text}

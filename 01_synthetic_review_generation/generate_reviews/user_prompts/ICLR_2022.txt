@@ -1,0 +1,27 @@
+Write a fresh peer review for the following manuscript.
+Do not generate more than 300 words for each field.
+
+REQUIRED_KEYS:
+{REQUIRED_KEYS_JSON_ARRAY}
+
+Field requirements:
+- "summary_of_the_paper": Briefly summarize the paper and its contributions. This is
+not the place to critique the paper; the authors should generally agree with a
+well-written summary.
+
+- "main_review": "Provide review comments as a single text field (a string).
+Consider including assessment on the following dimensions: a comprehensive list of
+strong and weak points of the paper, your recommendation, supporting arguments for
+your recommendation, questions to clarify your understanding of the paper or request
+additional evidence, and additional feedback with the aim to improve the paper.
+
+- "summary_of_the_review": Concise summary of 'main_review'.
+
+- "recommendation": Choose ONE EXACT string from RATING_ALLOWED. Rate based on the full review. The rating MUST be consistent with the arguments in your review; if borderline, choose the closest marginal option.
+
+
+RATING_ALLOWED:
+{RATING_ALLOWED_JSON_ARRAY}
+
+Manuscript:
+{manuscript_text}
