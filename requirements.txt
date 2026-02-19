@@ -1,0 +1,11 @@
+# PeerPrism data collection (00_data_collection)
+# Use with: python -m venv venv && source venv/bin/activate (or venv\Scripts\activate on Windows)
+
+# OpenReview API (fetch papers and reviews)
+openreview-py
+
+# PDF download
+requests
+
+# PDF -> Markdown (manuscript conversion)
+markitdown[pdf]

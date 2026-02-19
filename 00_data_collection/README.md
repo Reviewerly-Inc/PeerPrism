@@ -32,6 +32,15 @@ Skips files that already exist unless `--force` is given. `--delay` (default 0.5
 
 **Requires:** `pip install requests`
 
+### `convert_manuscripts_to_markdown.py`
+
+Converts manuscript PDFs to Markdown using [Microsoft MarkItDown](https://github.com/microsoft/markitdown). Reads PDFs from `data/manuscript_pdfs/` (each named `{forum_id}.pdf`), writes **`{forum_id}.md`** under the **PeerPrism repo** at **`data/manuscript_markdowns/`**.
+
+**Usage (from repo root with venv active):**  
+`python PeerPrism/00_data_collection/convert_manuscripts_to_markdown.py [--pdf-dir DIR] [--output-dir DIR]`
+
+**Requires:** `pip install 'markitdown[pdf]'` (or `pip install -r requirements.txt` from repo root).
+
 ---
 
 ## `forum_ids_by_venue_year.json`
