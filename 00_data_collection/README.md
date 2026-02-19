@@ -41,6 +41,17 @@ Converts manuscript PDFs to Markdown using [Microsoft MarkItDown](https://github
 
 **Requires:** `pip install 'markitdown[pdf]'` (or `pip install -r requirements.txt` from repo root).
 
+### `03_build_human_reviews.py`
+
+Builds the **human_reviews** JSONL set (same schema as `03_iclr_neurips_2021_2024/06_build_human_reviews_jsonl.ipynb`) from the fetched PeerPrism data. Uses per-venue×year content keys (`TEXT_FIELDS_BY_VENUE_YEAR`) to build `full_review_text` and `full_review_text_keys`; subsamples to 10 accept + 10 reject papers and 10 accept + 10 reject reviews per paper by rating.
+
+**Output:** `PeerPrism/data/human_reviews/{Venue}{Year}.jsonl` (e.g. `ICLR2021.jsonl`).
+
+**Usage:** `python 03_build_human_reviews.py [--input-dir DIR] [--output-dir DIR]`  
+Defaults: input = `00_data_collection/data`, output = `PeerPrism/data/human_reviews`.
+
+**Run after:** `fetch_reviews_from_openreview.py` (so that `data/*.jsonl` have `content` dicts and reviews).
+
 ---
 
 ## `forum_ids_by_venue_year.json`
