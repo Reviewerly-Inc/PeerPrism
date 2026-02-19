@@ -1,0 +1,37 @@
+You are an expert academic peer reviewer. Your task is to expand the following peer review by adding new sentences and paragraphs while preserving ALL the core critique points from the original review.
+
+## Instructions
+
+1. **Preserve ALL Original Critique Points**: Keep ALL critique points, weaknesses, strengths, and suggestions from the original review
+2. **Expand the Review**: Add new sentences and paragraphs that elaborate on the original points, provide additional context, or add related observations
+3. **Use Manuscript Content**: Reference specific details from the manuscript to support your expanded points
+4. **Maintain Decision**: The original review's decision/rating must remain unchanged - you must maintain the same acceptance/rejection recommendation
+5. **Maintain Tone**: Keep the same overall tone and level of detail as the original
+6. **Do NOT Change Original Points**: Do NOT modify or remove existing critique points, only add to them
+7. **Write Naturally**: Write naturally and fluently, as if you were writing the expanded review yourself
+
+## Manuscript
+
+{manuscript_text}
+
+## Original Review
+
+{review_text}
+
+## Original Decision (Rating)
+
+{rating}
+
+**IMPORTANT**: This decision must be preserved in your expanded review. The expanded review should lead to the same acceptance/rejection recommendation.
+
+## Your Task
+
+Expand the review above, ensuring that:
+- **The decision/rating remains exactly the same** - the expanded review must support the same acceptance/rejection recommendation
+- All original critique points are preserved and remain unchanged
+- New sentences and paragraphs are added that elaborate on existing points or add related observations
+- The expansion uses specific details from the manuscript to support the points
+- The review reads naturally and fluently with the new content integrated seamlessly
+
+## Expanded Review
+

@@ -1,0 +1,63 @@
+# PeerPrism review transformations
+# Data: {data_root}/human_reviews (from 03_build_human_reviews.py)
+# Output: {data_root}/transformations (rewritten, expanded, extract_regenerate, hybrid)
+# Manuscripts: {data_root}/manuscript_markdowns (files named {forum_id}.md)
+
+# Venues and years to process
+venues:
+  - ICLR
+  - NeurIPS
+
+years:
+  - 2021
+  - 2022
+  - 2023
+  - 2024
+
+# Number of papers to process per venue-year (null or -1 = all)
+papers_per_year: -1
+
+# Data root: relative to PeerPrism repo root. Input = data/human_reviews, output = data/transformations
+data_root: "data"
+
+# LLM providers and models
+# API keys in .env (OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, etc.)
+# Optional: llm_reviews_source — where to load LLM reviews from 05 folder when it differs
+# from this provider/model (e.g. 05 used OpenRouter for Claude, you use Anthropic for hybrid).
+llms:
+  - provider: openai
+    model: gpt-5
+  - provider: openai
+    model: o4-mini
+  - provider: google
+    model: gemini-2.5-flash
+  - provider: openrouter
+    model: anthropic/claude-haiku-4.5
+  - provider: openrouter
+    model: meta-llama/llama-4-scout
+  - provider: openrouter
+    model: deepseek/deepseek-r1
+
+# Output subdirs under data_root/transformations
+# llm_reviews_dir: optional, relative to repo root; used by hybrid to load LLM-generated reviews (e.g. data/generated_reviews)
+output:
+  base_dir: "transformations"
+  rewrite_dir: "rewritten"
+  hybrid_dir: "hybrid"
+  expanded_dir: "expanded"
+  extract_regenerate_dir: "extract_regenerate"
+  continued_dir: "continued"
+  generated_reviews_dir: "generated_reviews"
+  llm_reviews_dir: "data/synthetic_reviews"  # used by hybrid; folder of {Venue}{Year}_{provider}_{model}.jsonl
+
+# API settings
+api:
+  delay_seconds: 1.0
+  max_tokens: 2048
+  temperature: 0.7
+  timeout: 120
+  max_retries: 3
+
+# Manuscript (for expansion): max chars from manuscript (-1 = full)
+manuscript:
+  max_chars: -1

@@ -9,3 +9,11 @@ requests
 
 # PDF -> Markdown (manuscript conversion)
 markitdown[pdf]
+
+python-dotenv>=1.0.0
+requests>=2.31.0
+pyyaml>=6.0
+openai>=1.0.0  # Optional: for OpenAI provider
+# boto3>=1.28.0  # Optional: for AWS Bedrock provider (Claude 3.5 Sonnet)
+google-genai>=1.0.0  # Optional: for Google Gemini provider (replaces deprecated google-generativeai)
+anthropic>=0.39.0    # Optional: for Anthropic provider (Claude Haiku 4.5, etc.)

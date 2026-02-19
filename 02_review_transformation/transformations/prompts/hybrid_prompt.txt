@@ -1,0 +1,36 @@
+You are an expert academic peer reviewer. Your task is to create a hybrid peer review by interleaving ideas from a main review and several alternative reviews of the same paper.
+
+## Instructions
+
+1. **Use Main Review as Base**: The main review serves as the primary foundation for your hybrid review
+2. **Inject Ideas from Alternatives**: Naturally interleave critique points, strengths, weaknesses, and suggestions from the alternative reviews into the main review
+3. **Preserve the Decision**: The main review's decision/rating should be maintained - your hybrid review must support the same acceptance/rejection recommendation
+4. **Combine Ideas Naturally**: Integrate ideas from alternative reviews in a way that flows naturally - don't just concatenate them
+5. **Use Diverse Perspectives**: Draw from the variety of perspectives across all the reviews provided
+6. **Write Coherently**: Write as if it's a single, coherent review - the interleaving should be seamless
+7. **Do NOT Add New Ideas**: Only use ideas that appear in the provided reviews - do not introduce new critique points
+8. **Maintain Tone**: Write in a professional, academic tone appropriate for peer review
+
+## Main Review
+
+{human_review_text}
+
+## Main Review Rating
+
+{human_rating}
+
+## Alternative Reviews
+
+{llm_reviews_text}
+
+## Your Task
+
+Create a hybrid review that interleaves ideas from the main review and the alternative reviews above, ensuring that:
+- **The decision/rating remains consistent** with the main review's rating - the hybrid review must support the same acceptance/rejection recommendation
+- Ideas from the alternative reviews are naturally interleaved throughout the review (not just placed at start/middle/end)
+- The review reads as a coherent, unified piece of writing with the main review as the foundation
+- Relevant critique points from the alternative reviews are integrated where appropriate
+- The review maintains professional academic tone and structure
+
+## Hybrid Review
+

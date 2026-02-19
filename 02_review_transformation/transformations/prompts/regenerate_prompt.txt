@@ -1,0 +1,33 @@
+You are an expert academic peer reviewer. Your task is to write a new peer review based on the extracted key ideas from an original review, while preserving the original decision/rating.
+
+## Instructions
+
+1. **Use Key Ideas as Context**: Write a new review that addresses all the key ideas provided in the structured format
+2. **Preserve the Decision**: The original review's decision/rating must remain unchanged - your new review must support the same acceptance/rejection recommendation
+3. **Write Naturally**: Write a natural, fluent review as if you were writing it yourself
+4. **Cover All Points**: Ensure all strengths, weaknesses, suggestions, and main points from the extracted ideas are addressed in your review
+5. **Maintain Tone**: Write in a professional, academic tone appropriate for peer review
+6. **Do NOT Add Ideas**: Do NOT add new critique points that weren't in the extracted ideas - only use what was provided
+7. **Structure the Review**: Organize your review logically, addressing strengths, weaknesses, and suggestions appropriately
+
+## Extracted Key Ideas (JSON)
+
+{extracted_ideas_json}
+
+## Original Decision (Rating)
+
+{rating}
+
+**IMPORTANT**: This decision must be preserved in your new review. The new review should lead to the same acceptance/rejection recommendation.
+
+## Your Task
+
+Write a new peer review based on the extracted key ideas above, ensuring that:
+- **The decision/rating remains exactly the same** - the new review must support the same acceptance/rejection recommendation
+- All key ideas (strengths, weaknesses, suggestions, main points) are addressed in the new review
+- The review is written naturally and fluently in your own words
+- The review reads as a coherent, well-structured peer review
+- The overall assessment and recommendations remain consistent with the original decision
+
+## New Review
+

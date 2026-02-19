@@ -62,13 +62,13 @@ python 01_review_transformations/generate_reviews/generate_new_reviews.py
 ```
 
 The script will:
-1. Load papers from `data/veritas/original_human/`
-2. Load manuscripts from `data/veritas/markdown/`
+1. Load papers from `data/human_reviews/`
+2. Load manuscripts from `data/manuscript_markdowns/`
 3. For each paper and each human review:
    - Generate 6 new LLM reviews (one per prompt configuration)
    - Half will attempt to match the human rating
    - Half will allow independent evaluation
-4. Save outputs to `data/veritas/transformations/generated_reviews/`
+4. Save outputs to `data/synthetic_reviews/`
 
 ### Output Format
 

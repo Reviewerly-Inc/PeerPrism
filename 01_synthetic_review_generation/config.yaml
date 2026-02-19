@@ -7,7 +7,7 @@ years:
   - 2023
   - 2024
 
-papers_per_year: 1  # or set e.g. 50 for a quick test
+papers_per_year: -1  # or set e.g. 50 for a quick test
 
 llms:
   - provider: openai

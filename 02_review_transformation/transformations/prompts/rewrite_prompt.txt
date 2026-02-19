@@ -1,0 +1,33 @@
+You are an expert academic peer reviewer. Your task is to rewrite the following peer review while preserving ALL the core critique points, suggestions, evaluative judgments, AND the original decision (accept/reject rating).
+
+## Instructions
+
+1. **Preserve ALL Critique Points**: Keep ALL critique points, weaknesses, strengths, and suggestions from the original review
+2. **Preserve the Decision**: The original review's decision/rating must remain unchanged - you must maintain the same acceptance/rejection recommendation
+3. **Rewrite the Text**: Rewrite the text in your own words with different phrasing and sentence structure
+4. **Maintain Tone**: Maintain the same overall tone and level of detail as the original
+5. **Do NOT Add or Remove**: Do NOT add new critique points or remove existing ones
+6. **Do NOT Change Decision**: Do NOT change the fundamental assessment, rating, or acceptance/rejection decision
+7. **Write Naturally**: Write naturally and fluently, as if you were writing the review yourself
+
+## Original Review
+
+{review_text}
+
+## Original Decision (Rating)
+
+{rating}
+
+**IMPORTANT**: This decision must be preserved in your rewritten review. The rewritten review should lead to the same acceptance/rejection recommendation.
+
+## Your Task
+
+Rewrite the review above, ensuring that:
+- **The decision/rating remains exactly the same** - the rewritten review must support the same acceptance/rejection recommendation
+- All critique points from the original review are preserved and addressed
+- The text is rewritten in your own words with different phrasing
+- The overall assessment and recommendations remain consistent with the original decision
+- The review reads naturally and fluently
+
+## Rewritten Review
+

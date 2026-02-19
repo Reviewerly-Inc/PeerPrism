@@ -1,0 +1,38 @@
+You are an expert at analyzing academic peer reviews. Your task is to extract the key ideas from the following peer review and represent them in a structured JSON format.
+
+## Instructions
+
+1. **Extract Key Ideas**: Identify the main critique points, strengths, weaknesses, and suggestions from the review
+2. **Use Manuscript for Context**: The manuscript is provided ONLY for context to help you understand what the review is referring to. Do NOT use it to generate new ideas - only extract ideas that are explicitly mentioned in the review
+3. **Structured Output**: Output a valid JSON object with the following structure:
+   - `summary`: A brief 1-2 sentence summary of the overall review
+   - `strengths`: List of strengths mentioned in the review (as bullet points)
+   - `weaknesses`: List of weaknesses/criticisms mentioned in the review (as bullet points)
+   - `suggestions`: List of suggestions for improvement mentioned in the review (as bullet points)
+   - `main_points`: List of the main critique points/key arguments (as bullet points)
+   - `technical_details`: List of any specific technical issues or details mentioned (as bullet points)
+
+4. **Be Comprehensive**: Extract ALL key points from the review - don't miss important details
+5. **Preserve Meaning**: Ensure the extracted ideas accurately reflect what's in the original review
+
+## Manuscript (for context only)
+
+{manuscript_text}
+
+## Original Review
+
+{review_text}
+
+## Original Decision (Rating)
+
+{rating}
+
+## Your Task
+
+Extract the key ideas from the review above and output them as a JSON object. Remember:
+- Use the manuscript ONLY for context to understand references - do NOT generate new ideas
+- Extract ideas that are explicitly mentioned in the review
+- Output valid JSON that can be parsed programmatically
+
+## Extracted Ideas (JSON)
+
