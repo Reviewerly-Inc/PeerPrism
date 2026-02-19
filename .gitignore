@@ -1,7 +1,5 @@
 /venv
 __pycache__/
 /00_data_collection/data/manuscript_pdfs
-/data
-/data/manuscript_markdowns
 .env
 01_synthetic_review_generation/generate_reviews/outputs/

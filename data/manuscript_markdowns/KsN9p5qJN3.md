@@ -1,0 +1,1552 @@
+Under review as a conference paper at ICLR 2021
+
+ENERGY-BASED OUT-OF-DISTRIBUTION DETECTION
+FOR MULTI-LABEL CLASSIFICATION
+
+Anonymous authors
+Paper under double-blind review
+
+ABSTRACT
+
+Out-of-distribution (OOD) detection is essential to prevent anomalous inputs from
+causing a model to fail during deployment. Improved methods for OOD detec-
+tion in multi-class classiﬁcation have emerged, while OOD detection methods for
+multi-label classiﬁcation remain underexplored and use rudimentary techniques.
+We propose SumEnergy, a simple and effective method, which estimates the OOD
+indicator scores by aggregating energy scores from multiple labels. We show that
+SumEnergy can be mathematically interpreted from a joint likelihood perspective.
+Our results show consistent improvement over previous methods that are based
+on the maximum-valued scores, which fail to capture joint information from mul-
+tiple labels. We demonstrate the effectiveness of our method on three common
+multi-label classiﬁcation benchmarks, including MS-COCO, PASCAL-VOC, and
+NUS-WIDE. We show that SumEnergy can reduce the FPR95 by up to 10.05%
+compared to the previous best baseline, establishing state-of-the-art performance.
+
+1
+
+INTRODUCTION
+
+Out-of-distribution (OOD) detection is central for reliably deploying machine learning models in
+open-world environments, where new forms of test-time data may appear that were nonexistent
+during the training time. The problem of OOD detection has gained signiﬁcant research attention
+lately, given its importance for safety-critical applications such as unseen disease identiﬁcation (Cao
+et al., 2020). However, recent studies have primarily focused on detecting OOD examples in multi-
+class classiﬁcation, where each sample is assigned to one and only one label (Bevandi´c et al., 2018;
+Hein et al., 2019; Hendrycks & Gimpel, 2016; Lakshminarayanan et al., 2017; Lee et al., 2018;
+Liang et al., 2018; Mohseni et al., 2020; Chen et al., 2020; Hsu et al., 2020; Liu et al., 2020). This
+can be restrictive in many real-world settings where images often have multiple objects of interest.
+For example, self-driving cars must differentiate between the road, trafﬁc signs, and obstacles within
+a frame. In the medical domain, multiple abnormalities may be present in a medical image (Wang
+et al., 2017). Multi-label classiﬁcation is desirable since there is no constraint on the number of
+classes an instance can be assigned to.
+
+Currently, OOD detection in multi-label classiﬁcation remains relatively underexplored. Out of the
+multi-label methods evaluated in (Hendrycks et al., 2019), MaxLogit achieved the best performance.
+However, simply using the maximum-valued logit is limiting because it does not incorporate infor-
+mation available from other possible labels. As seen in Figure 1, MaxLogit can only capture the
+difference between the dominant outputs for dog (in-dist.) and car (OOD), while positive infor-
+mation from another dominant label cat (in-dist.) is dismissed. Other baseline methods such as
+ODIN (Liang et al., 2018) and Mahalanobis (Lee et al., 2018) also derive scores based on the max-
+imum score (e.g., calibrated softmax score or Mahalanobis distance), and fail to capture the joint
+information. While energy scores have recently demonstrated superior OOD detection performance
+in the multi-class setting (Liu et al., 2020), this method does not trivially generalize to a multi-label
+classiﬁcation setting where labels are not mutually exclusive. Hitherto, a key challenge lies in how
+to leverage information across different labels.
+
+In this paper, we propose an energy-based method for OOD detection in the multi-label setting,
+which estimates OOD indicator scores jointly from multiple labels. We propose a simple and effec-
+tive aggregation mechanism, SumEnergy, that seeks to combine the label-wise energy scores derived
+from individually independent classes. We show that the SumEnergy scores are mathematically
+
+1
+
+Under review as a conference paper at ICLR 2021
+
+Figure 1: Energy-based out-of-distribution detection for multi-label classiﬁcation. During inference time,
+input x is passed through classiﬁer f , and label-wise scores are computed for each label. OOD indicator scores
+are either the maximum-valued score (denoted by green outlines) or the sum of all scores. Taking the sum
+results in a larger difference in scores and more separation between in-distribution and OOD inputs (denoted
+by red lines), resulting in better OOD detection. Plots in the bottom right depict the probability densities of
+maximum-valued versus summed scores.
+
+meaningful, and can be interpreted from a joint likelihood perspective. Intuitively, an input with
+multiple dominant labels is more likely to be in-distribution, which is the key aspect that SumEnergy
+capitalizes on. As shown in Figure 1, summing label-wise energies over all labels ampliﬁes the
+difference in scores between in-distribution and OOD inputs. Our method is parameter-free and can
+be conveniently used for any pre-trained multi-label classiﬁcation model. Below we describe our
+contributions in detail.
+
+Contributions First, we propose a theoretically motivated scoring function, SumEnergy, that is
+based on the aggregation over label-wise energy scores. Extensive experiments show that SumEn-
+ergy outperforms existing methods on three common multi-label classiﬁcation benchmarks, estab-
+lishing state-of-the-art performance. For example, on a DenseNet trained with MS-COCO (Lin
+et al., 2014), our method reduces the false positive rate (at 95% TPR) by 10.05% when evaluated
+against ImageNet OOD data, compared to the best performing baselines. Consistent performance
+improvement is also observed on a different OOD test dataset Texture (Cimpoi et al., 2014a), as well
+as alternative network architecture.
+
+Additionally, we perform a comparative analysis of how an alternative aggregation method affects
+In particular, we consider MaxEnergy, which takes the maximum
+OOD detection performance.
+energy score among the individual labels as the OOD indicator score. On a DenseNet trained with
+the PASCAL-VOC dataset, MaxEnergy yields 4.05% lower FPR95 compared to SumEnergy, which
+underlines the importance of taking into account scores derived from multiple labels.
+
+Lastly, as an ablation, we demonstrate that energy scores are more compatible with the proposed
+summation aggregation method, compared to previous scoring functions such as logit (Hendrycks
+et al., 2019), MSP (Hendrycks & Gimpel, 2016), ODIN (Liang et al., 2018), and Mahalanobis dis-
+tance (Lee et al., 2018). To see this, we explore the effectiveness of applying aggregation methods
+to previous popular scoring functions, which helps understand their applicability in the multi-label
+setting. We ﬁnd that summing labels’ scores using previous methods is inferior to summing la-
+bels’ energies, emphasizing the need for SumEnergy. For example, simply summing over the logits
+across labels results in up to 51.93% degradation in FPR95 on MS-COCO, since the outputs are
+mixed with positive and negative numbers. In contrast, SumEnergy does not suffer from this issue
+because the signs of label-wise energy scores are uniform. More importantly, label-wise energy is
+provably aligned with the probability density of the corresponding label’s training data. Our study
+therefore underlines the importance of properly choosing both the label-wise scoring function and
+the aggregation method. We show strong compatibility between the label-wise energy function and
+aggregation function, supported by both mathematical interpretation and empirical results.
+
+2
+
+f(x;θ)Out-of-DistributionPlaneCarBirdDeerDogFrogHorseCatShipTruckCarMaxSumSumEnergy Score (ours) MaxLogit ScoreOut-of-DistributionIn-DistributionIn-Distributionaggregating over manyxxUnder review as a conference paper at ICLR 2021
+
+2 METHODS
+
+2.1 BACKGROUND: ENERGY FUNCTION IN MULTI-CLASS CLASSIFICATION
+
+We consider a multi-class neural classiﬁer f (x) : RD → RK, which maps an input x ∈ RD to K
+real-valued numbers as logits. A softmax function is used to derive a categorical distribution,
+
+p(yi | x) =
+
+efyi (x)
+j=1 efyj (x)
+
+(cid:80)K
+
+,
+
+(1)
+
+which indicates the probability for an input x to be of class yi, with i ∈ {1, 2, ..., K}. A multi-class
+classiﬁer can be interpreted from an energy-based perspective (Grathwohl et al., 2019) by viewing
+the logit fyi(x) of class yi as an energy function E(x, yi) = −fyi(x). Therefore, Equation 1 can be
+rewritten as:
+
+p(yi | x) =
+
+e−E(x,yi)
+j=1 e−E(x,yj )
+
+(cid:80)K
+
+=
+
+e−E(x,yi)
+e−E(x)
+
+.
+
+(2)
+
+(3)
+
+By equalizing the two denominators above, we can express the free energy function E(x) for any
+given input x ∈ RD in forms of:
+
+E(x) = −log
+
+K
+(cid:88)
+
+i=1
+
+efyi (x).
+
+(4)
+
+2.2 ENERGY FUNCTION FOR MULTI-LABEL CLASSIFICATION
+
+In this work, we propose using an energy-based method for OOD detection in multi-label classiﬁ-
+cation networks, where an input can have several labels (see Figure 1). In what follows, we ﬁrst
+introduce a label-wise energy function, and then propose aggregation methods that can leverage the
+joint information across labels in a theoretically meaningful way.
+
+Label-wise Free Energy In multi-label classiﬁcation, the prediction for each binary label yi is
+independently made by a binary logistic classiﬁer:
+
+p(yi = 1 | x) =
+
+efyi (x)
+1 + efyi (x)
+
+,
+
+where i ∈ {1, 2, ..., K}. For brevity, we use yi in the probabilistic derivations to indicate the
+label being positive, i.e., yi = 1. The logistic classiﬁer output can be viewed as the softmax with
+two logits—0 and fyi(x), respectively. For each class yi, we can deﬁne label-wise free energy as
+follows:
+
+Eyi(x) = −log(1 + efyi (x)).
+
+(5)
+
+Aggregation Methods We propose and contrast two aggregation mechanisms that seek to combine
+the label-wise energy scores derived above:
+
+Max : Emax(x) = max
+
+i
+
+−Eyi (x)
+
+Sum : Esum(x) =
+
+K
+(cid:88)
+
+i=1
+
+−Eyi(x)
+
+(6)
+
+(7)
+
+In particular, MaxEnergy ﬁnds the largest label-wise energy score among all labels; whereas SumEn-
+ergy takes the summation of energy scores across all labels. Note that in the above equations, label-
+wise energy Eyi(x) by deﬁnition is a negative value, and the aggregation methods output a positive
+value by negation.
+
+3
+
+Under review as a conference paper at ICLR 2021
+
+Mathematical Interpretation We provide mathematical interpretations of different aggregation
+methods. First, by resorting to the energy-based model (LeCun et al., 2006), we show that the
+label-wise energy score is provably aligned with the conditional likelihood function. The condi-
+tional likelihood p(x | yi) is given by:
+
+p(x | yi) =
+
+e−Eyi (x)
+
+(cid:82)
+
+x|yi
+
+e−Eyi (x)
+
+,
+
+(8)
+
+where Zyi = (cid:82)
+e−Eyi (x) is the normalized density. Since Zyi is the same with respect to all x
+with label yi, the denominator in Equation 8 does not affect the overall distributional of label-wise
+energy scores. By taking the logarithm on both sides of Equation 8, we have:
+
+x|yi
+
+Eyi (x) ∝ − log p(x | yi).
+
+Given this, MaxEnergy can be interpreted as taking the maximum of conditioned log-likelihood
+among all labels:
+
+Emax(x) ∝ max
+
+i
+
+log p(x | yi),
+
+(9)
+
+which does not take into account the joint information across labels.
+
+In contrast, we provide mathematical interpretation for SumEnergy, which is the ﬁrst method to con-
+sider the joint estimation of OOD scores across labels. We show that SumEnergy can be interpreted
+from the joint likelihood perspective:
+
+Esum(x) =
+
+=
+
+K
+(cid:88)
+
+i=1
+
+K
+(cid:88)
+
+i=1
+
+(cid:18)
+
+(cid:19)
+
+log
+
+p(x | yi) · Zyi
+
+log p(x | yi) +
+
+K
+(cid:88)
+
+log Zyi
+
+i=1
+(cid:124)
+
+(cid:123)(cid:122)
+Z:constant for all x
+
+(cid:125)
+
+By applying Bayesian rule for each term log p(x | yi) in Equation 11, we have
+
+Esum(x) = log
+
+= log
+
+K
+(cid:89)
+
+i=1
+
+K
+(cid:89)
+
+i=1
+
+p(yi | x) · p(x)
+p(yi)
+
++ Z
+
+p(yi | x) + K · log p(x) + (Z − log
+
+K
+(cid:89)
+
+p(yi))
+
+(cid:124)
+
+i=1
+(cid:123)(cid:122)
+C: constant for all x
+
+(cid:125)
+
+(10)
+
+(11)
+
+(12)
+
+(13)
+
+Given all label yi are conditionally independent, we have (cid:81)K
+Therefore, Equation 13 is equivalent to:
+
+i=1 p(yi | x) = p(y1, y2, ..., yK | x).
+
+Esum(x) = log p(y1, y2, . . . , yK | x) + K · log p(x) + C
+p(x | y1, y2, ..., yK) · (cid:81)K
+
+i=1 p(yi)
+
++ K · log p(x) + C
+
+= log
+
+p(x)
+= log p(x | y1, y2, ..., yK)
+(cid:125)
+(cid:123)(cid:122)
+(cid:124)
+joint conditional log likelihood
+
++
+
+(K − 1) · log p(x)
+(cid:125)
+(cid:123)(cid:122)
+(cid:124)
+log data density, ↑ for in-distribution
+
++
+
+Z
+(cid:124)(cid:123)(cid:122)(cid:125)
+constant for all x
+
+(14)
+
+(15)
+
+(16)
+
+The equation above suggests that Esum(x) is in fact linearly aligned with the joint conditional log
+likelihood and log data density. The second term is desirable for OOD detection since it is aligned
+with the underlying data density, which is higher for in-distribution data x and vice versa. The
+ﬁrst term takes into account joint estimation across labels, which is new to our multi-label setting
+and was not previously considered in multi-class setting (Liu et al., 2020). The ﬁrst term allows
+even further discriminativity between in- vs. OOD data, since OOD data is expected to have lower
+joint conditional likelihood (i.e., not associated with any of the labels). In contrast, having multiple
+
+4
+
+Under review as a conference paper at ICLR 2021
+
+dominant labels is indicative of an in-distribution input, which is a characteristic that SumEnergy
+captures. More importantly, our method does not require estimating the density Z explicitly, as Z is
+sample independent and does not affect the overall SumEnergy score distribution.
+
+We note that our derivation is based on the assumption that all labels are independent, which is in
+accordance with standard multi-label classiﬁcation loss by treating each label as a binary prediction
+problem (Tsoumakas & Katakis, 2007). We consider this setting for its simplicity and generality.
+Our work also opens up an interesting future direction of OOD detection by considering the struc-
+tural dependency among labels (Chen et al., 2017; 2019b;c).
+
+2.3 AGGREGATED ENERGY FOR MULTI-LABEL OOD DETECTION
+
+We propose using the aggregated energy functions E(x) deﬁned in Section 2.2 for OOD detection:
+
+G(x; τ ) =
+
+(cid:26)out
+in
+
+if E(x) ≤ τ,
+if E(x) > τ,
+
+(17)
+
+where τ is the energy threshold, and can be chosen so that a high fraction of in-distribution data is
+correctly classiﬁed by G(x; τ ). E(x) could take on forms of Max or Sum. A data point with higher
+aggregated energy E(x) is considered as in-distribution, and vice versa (see Figure 1). We explore
+and provide the tradeoff of different aggregation methods in Section 3.2.
+
+3 EXPERIMENTS
+
+In this section, we describe our experimental setup (Section 3.1) and demonstrate the effectiveness
+of our method on several OOD evaluation tasks (Section 3.2). We also conduct extensive ablation
+studies and comparative analysis that leads to an improved understanding of different methods.
+
+3.1 SETUP
+
+In-distribution Datasets We consider three multi-label datasets: MS-COCO (Lin et al., 2014),
+PASCAL-VOC (Everingham et al., 2015), and NUS-WIDE (Chua et al., 2009). MS-COCO consists
+of 82,783 training, 40,504 validation, and 40,775 testing images with 80 common object categories.
+PASCAL-VOC contains 22,531 images across 20 classes. NUS-WIDE includes 269,648 images
+across 81 concept labels. Since NUS-WIDE has invalid and untagged images, we follow the work
+(Zhu et al., 2017) and use 119,986 training images and 80,283 test images.
+
+Training Details We train three multi-label classiﬁers, one for each dataset above. The classiﬁers
+have a DenseNet-121 backbone architecture, with a ﬁnal layer that is replaced by 2 fully connected
+layers. Each classiﬁer is pre-trained on ImageNet-1K and then ﬁne-tuned with the logistic sigmoid
+function to its corresponding multi-label dataset. We use the Adam optimizer (Kingma & Ba, 2014)
+with standard parameters (β1 = 0.9, β2 = 0.999). The initial learning rate is 10−4 for the fully
+connected layers and 10−5 for convolutional layers. We also augmented the data with random crops
+and random ﬂips to obtain color images of size 256 × 256. After training, the mAP is 87.51% for
+PASCAL-VOC, 73.83% for MS-COCO, and 60.22% for NUS-WIDE.
+
+Out-of-distribution Datasets To evaluate the models trained on the in-distribution datasets above,
+we follow the same set up as in (Hendrycks et al., 2019) and use ImageNet (Deng et al., 2009) for
+its generality. Besides, we evaluate against the Textures dataset (Cimpoi et al., 2014b) as OOD. For
+ImageNet, we use the same set of 20 classes chosen from ImageNet-22K as in (Hendrycks et al.,
+2019). These classes are chosen not to overlap with ImageNet-1k since the multi-label classiﬁers
+are pre-trained on ImageNet-1K. Speciﬁcally, we use the following classes for evaluating the MS-
+COCO and PASCAL-VOC pre-trained models: dolphin, deer, bat, rhino, raccoon, octopus, giant
+clam, leech, venus ﬂytrap, cherry tree, Japanese cherry blossoms, redwood, sunﬂower, croissant,
+stick cinnamon, cotton, rice, sugar cane, bamboo, and turmeric. Since NUS-WIDE contains high-
+level concepts like animal, plants and ﬂowers, we use a different set of classes that are distinct from
+NUS-WIDE: asterism, battery, cave, cylinder, delta, fabric, ﬁlament, ﬁre bell, hornet nest, kazoo,
+lichen, naval equipment, newspaper, paperclip, pythium, satellite, thumb, x-ray tube, yeast, zither.
+
+Evaluation Metrics We measure the following metrics that are commonly used for OOD detection:
+(1) the false positive rate (FPR95) of OOD examples when the true positive rate of in-distribution
+examples is at 95%; (2) the area under the receiver operating characteristic curve (AUROC); and
+(3) the area under the precision-recall curve (AUPR).
+
+5
+
+Under review as a conference paper at ICLR 2021
+
+Din
+
+OOD Score
+
+MS-COCO
+
+PASCAL-VOC
+
+NUS-WIDE
+
+FPR95 / AUROC / AUPR
+↑
+
+↓
+
+↑
+
+MaxLogit (Hendrycks et al., 2019)
+MaxProb
+MSP (Hendrycks & Gimpel, 2016)
+ODIN (Liang et al., 2018)
+Mahalanobis (Lee et al., 2018)
+LOF (Breunig et al., 2000)
+Isolation Forest (Liu et al., 2008)
+
+43.53 / 89.11 / 93.74
+43.53 / 89.11 / 93.74
+79.90 / 73.70 / 85.37
+43.53 / 89.11 / 93.74
+46.86 / 88.59 / 93.85
+80.44 / 73.95 / 86.01
+94.39 / 49.04 / 66.87
+
+45.06 / 89.22 / 83.14
+45.06 / 89.22 / 83.14
+74.05 / 79.32 / 72.54
+45.06 / 89.22 / 83.16
+41.74 / 88.65 / 81.12
+86.34 / 69.21 / 58.93
+93.22 / 50.67 / 35.78
+
+56.46 / 83.58 / 94.32
+56.46 / 83.58 / 94.32
+88.50 / 60.81 / 87.00
+56.46 / 83.58 / 94.32
+62.67 / 84.02 / 95.25
+85.21 / 67.75 / 89.61
+95.69 / 53.12 / 83.32
+
+MaxEnergy
+SumEnergy
+
+43.53 / 89.11 / 93.74
+33.48 / 92.70 / 96.25
+
+45.06 / 89.22 / 83.14
+41.01 / 91.10 / 86.33
+
+56.46 / 83.58 / 94.32
+48.98 / 88.30 / 96.40
+
+Table 1: OOD detection performance comparison using energy-based approaches vs. competitive baselines.
+We use DenseNet (Huang et al., 2017) to train on the in-distribution datasets. We use a subset of ImageNet
+classes as OOD test data, as described in Section 3.1. All values are percentages. ↑ indicates larger values are
+better, and ↓ indicates smaller values are better. Bold numbers are superior results. Description of baseline
+methods, additional evaluation results on different OOD test data, and different architecture (e.g., ResNet) can
+be found in the Appendix.
+
+3.2 RESULTS
+
+How do energy-based approaches compare to common OOD detection methods? In Table 1,
+we compare energy-based approaches against competitive OOD detection methods in literature,
+where SumEnergy demonstrates state-of-the-art performance. For fair comparisons, we consider
+approaches that rely on pre-trained models (without performing retraining or ﬁne-tuning). Follow-
+ing the set up in (Hendrycks et al., 2019), all the numbers reported are evaluated on ImageNet
+OOD test data, as described in Section 3.1. We provide additional evaluation results for the Tex-
+ture OOD test dataset in Appendix A. Most baselines such as MaxLogit (Hendrycks et al., 2019),
+Maximum Softmax Probability (MSP) (Hendrycks & Gimpel, 2016), ODIN (Liang et al., 2018) and
+Mahalanobis (Lee et al., 2018) derive OOD indicator scores based on the maximum-valued statis-
+tics among all labels. Local Outlier Factor (LOF) (Breunig et al., 2000) uses K-nearest neighbors
+(KNN) to estimate the local density, where OOD examples are detected from having lower den-
+sity compared to their neighbors. Isolation forest (Liu et al., 2008) is a tree-based approach, which
+detects anomaly based on the path length from the root node to the terminating node.
+
+Among different approaches, SumEnergy outperforms the
+best-performing baseline across all three multi-label clas-
+siﬁers considered.
+In particular, on a network trained
+with the MS-COCO dataset, SumEnergy reduces FPR95
+by 10.05%, compared to MaxLogit. We provide the AU-
+ROC curves for our method SumEnergy in Figure 2, for
+all three in-distribution datasets considered. The y-axis
+is the true positive rate (TPR), whereas the x-axis is the
+FPR. The curves indicate how the OOD detection per-
+formance changes as we vary the threshold τ in Equa-
+tion 17. We additionally evaluate on a different architec-
+ture, ResNet (He et al., 2016), for which we observe con-
+sistent improvement and provide details in the Appendix.
+
+We also note here that existing approaches using a pre-
+trained model (such as ODIN (Liang et al., 2018) and
+Mahalanobis (Lee et al., 2018)) have hyperparameters
+that need to be tuned. In contrast, using an energy-based
+method on pre-trained models is parameter-free and easy
+to use and deploy. In particular, the Mahalanobis approach is based on the assumption that feature
+representation forms class-conditional Gaussian distributions, and hence may not be well suited for
+the multi-label setting (which requires joint distribution to be learned).
+
+Figure 2: AUROC curves for OOD
+in-
+detector
+distribution multi-label classiﬁcation
+datasets.
+
+from three
+
+obtained
+
+How do different aggregation methods affect OOD detection performance? In Table 1, we also
+perform a comparative analysis of the effect of different aggregation functions that combine label-
+
+6
+
+0.00.20.40.60.81.0False Positive Rate0.000.100.200.300.400.500.600.700.800.900.951.00True Positive RatePASCAL-VOCCOCONUS-WIDEUnder review as a conference paper at ICLR 2021
+
+Din
+
+MS-COCO
+
+PASCAL
+
+NUS-WIDE
+
+OOD Score
+
+Aggregation
+
+Logit
+Prob
+ODIN
+Mahalanobis
+LOF
+Isolation Forest
+
+Energy (ours)
+
+Sum
+Sum
+Sum
+Sum
+Sum
+Sum
+
+Sum
+
+FPR95 / AUROC / AUPR
+↑
+
+↑
+
+↓
+
+95.46 / 61.81 / 80.39
+45.04 / 89.32 / 94.40
+56.56 / 84.62 / 92.24
+53.43 / 87.52 / 93.35
+N/A
+N/A
+
+87.18 / 72.68 / 61.24
+38.57 / 86.53 / 79.10
+50.35 / 79.45 / 70.19
+44.43 / 87.76 / 79.86
+N/A
+N/A
+
+96.53 / 51.75 / 82.55
+50.84 / 83.82 / 95.15
+56.26 / 81.04 / 94.34
+69.05 / 80.46 / 94.09
+N/A
+N/A
+
+33.48 / 92.70 / 96.25
+
+41.01 / 91.10 / 86.33
+
+48.98 / 88.30 / 96.40
+
+Table 2: Ablation study on the effect of summation for prior approaches. We use DenseNet (Huang et al.,
+2017) to train on the in-distribution datasets. We use ImageNet as OOD test data as described in Section 3.1.
+Note that Sum does not apply to tree-based or KNN-based approaches (e.g., LOF and Isolation Forest).
+
+wise energy scores. Among those, we observe that MaxEnergy does not outperform SumEnergy,
+which utilizes information jointly from across the labels. The performance of MaxEnergy is on
+par with MaxLogit since MaxEnergy, given by maxi log(1 + efyi (x)), is approximately close to
+the MaxLogit when fyi (x) is large. The results underline the importance of taking into account
+information from other labels, not just the maximum-valued label. This is because, in multi-label
+classiﬁcation, the model may assign high probabilities to several classes. Theoretically, SumEnergy
+is also more meaningful, and can be interpreted from a joint likelihood perspective as shown in
+Section 2.2.
+
+1
+
+What is the effect of applying the aggregation method to prior methods? As an extension, we
+explore the effectiveness of applying the aggregation method to previous scoring functions such as
+logit (Hendrycks et al., 2019), MSP (Hendrycks & Gimpel, 2016) and ODIN (Liang et al., 2018).
+The results are summarized in Table 2. We calculate scores based on the logit fyi(x), sigmoid of
+(x) , ODIN score, as well as Mahalanobis distance score Myi(x) by treating each
+the logit
+label independently. We then perform summation across the label-wise scores as the overall OOD
+score. This ablation essentially replaces the Max aggregation with Sum, which helps understand
+the extent to which previous approaches are amenable in the multi-label setting. Note that the
+summation aggregation method does not apply to tree-based or KNN-based approaches such as
+LOF and Isolation Forest.
+
+1+e−fyi
+
+Interestingly, we found that applying summation over individual logit/MSP/ODIN/Mahalanobis
+scores from each label does not yield competitive results, and in many cases worsens the perfor-
+mance. For example, simply summing over the logits across the labels leads to severe degradation
+in performance since the outputs are mixed with positive and negative numbers. On MS-COCO,
+the FPR degrades from 43.53% using MaxLogit to 95.46% (using SumLogit). In contrast, SumEn-
+ergy does not suffer from this issue since the energy scores for each individual label have a uniform
+sign. More importantly, the label-wise scores derived from energy is theoretically more meaningful
+than logit/MSP/ODIN/Mahalanobis, since it is provably aligned with the probability density of the
+training data corresponding to the label. This underlines the importance of properly choosing the
+label-wise scoring function to be compatible with the aggregation method.
+
+SumEnergy vs. SumProb We highlight the advantage of SumEnergy over SumProb both em-
+pirically and theoretically. As seen in Table 2, the performance difference between SumEnergy
+and SumProb is substantial.
+In particular, on MS-COCO, our method outperforms SumProb by
+11.56% (FPR95). For threshold independent metric AUROC, SumEnergy consistently outperforms
+SumProb by 3.38% (MS-COCO), 4.57% (PASCAL), and 4.48% (NUS-WIDE). SumEnergy is a
+mathematically meaningful measurement and can be interpreted from a joint likelihood perspective
+(see Section 2.2), whereas SumProb does not. In fact, one can show that the probability score for
+each individual label is not aligned with the conditioned data density function. To see this, we can
+derive the probability for each binary logistic classiﬁer as:
+
+log p(yi | x) = log
+
+efyi (x)
+1 + efyi (x)
+
+= fyi(x) + Eyi(x).
+
+7
+
+Under review as a conference paper at ICLR 2021
+
+Figure 3: Label-wise energy scores −Eyi (x) for in-distribution example from PASCAL-VOC (left), and OOD
+input from ImageNet (right). The OOD input is misclassiﬁed using MaxLogit score since the dominant output
+has a high activation, making it indistinguishable from an in-distribution data’s MaxLogit score. In contrast,
+SumEnergy correctly classiﬁes both images since it results in larger differences in scores between in-distribution
+and OOD inputs.
+
+In fact, the ﬁrst term fyi(x) is larger for in-distribution data with label yi, whereas the second term
+is smaller for in-distribution data with Eyi(x) ∝ − log p(x | yi). This leads to a biased scoring
+distribution that is no longer proportional to the label-conditional log-likelihood log p(x | yi):
+
+log p(yi | x) (cid:54)∝ class-conditional likelihood of data with label yi
+
+SumProb, as a result, inherits this weakness theoretically and performs worse than SumEnergy.
+
+Qualitative case study Lastly, to provide further insights on our method, we qualitatively examine
+examples from the multi-label classiﬁcation dataset PASCAL-VOC (in-dist.) and OOD input from
+the ImageNet that are correctly classiﬁed by SumEnergy but not MaxLogit. In Figure 3 (left), we see
+an in-distribution example is labeled as dog, car, chair and person, with MaxLogit score 1.63
+and SumEnergy score 3.23. We also show an OOD input (Figure 3, right) with a single dominant
+activation on the bird class, with MaxLogit score 2.14 and SumEnergy score 2.19. In this example,
+taking the sum appropriately resulted in a higher score for the in-distribution image than the OOD
+image. Contrarily, MaxLogit’s score for the in-distribution image was lower than that of the OOD
+image, which results in ineffective detection.
+
+4 RELATED WORK
+
+Multi-label classiﬁcation The task of identifying multiple classes within an input example is of
+signiﬁcant interest in many applications (Tsoumakas & Katakis, 2007), with deep neural networks
+being commonly used as the classiﬁer. Natural images usually contain several objects and may have
+many associated tags (Wang et al., 2016). (Gong et al., 2013) use convolutional neural networks
+(CNN) to annotate images with 3 or 5 tags on the NUS-WIDE dataset. (Chen et al., 2019a) use
+CNNs to tag images of road scenes from 52 possible labels. In the medical domain, (Wang et al.,
+2017) present a chest X-ray dataset in which one image may contain multiple abnormalities. Multi-
+label classiﬁcation is also prominent in natural language processing (Nam et al., 2014). Recent work
+also provides a theoretical analysis of multi-label classiﬁcation under various measures (Wu & Zhu,
+2020). Our proposed method is therefore relevant to a wide range of applications in the real world.
+
+Out-of-distribution uncertainty for pre-trained models The softmax conﬁdence score has be-
+come a common baseline for OOD detection (Hendrycks & Gimpel, 2016). A theoretical investiga-
+tion (Hein et al., 2019) shows that neural networks with ReLU activation can produce arbitrarily high
+softmax conﬁdence for OOD inputs. Several works attempt to improve the OOD uncertainty esti-
+mation by using deep ensembles (Lakshminarayanan et al., 2017), ODIN score (Liang et al., 2018),
+Mahalanobis distance-based conﬁdence score (Lee et al., 2018), and generalized ODIN score (Hsu
+et al., 2020). (DeVries & Taylor, 2018) propose to learn the conﬁdence score by using an auxiliary
+branch to derive the OOD score. Recent work using energy score demonstrated state-of-the-art per-
+formance on OOD detection tasks (Liu et al., 2020). However, previous methods primarily focused
+on multi-class classiﬁcation networks. In contrast, in our work, we propose a parameter-free mea-
+
+8
+
+Out-of-DistributionIn-Distribution−Ey(x)−Ey(x)Under review as a conference paper at ICLR 2021
+
+surement that allows effective OOD detection in the underexplored multi-label setting, where the
+information from across various labels are combined in a theoretically meaningful manner.
+
+Out-of-distribution detection with model ﬁne-tuning While our work primarily focused on OOD
+detection for pre-trained neural networks, a parallel line of research has also explored using auxil-
+iary outlier OOD data to help the OOD detector generalize better. Auxiliary data allows the model
+to be explicitly regularized through ﬁne-tuning, producing lower conﬁdence on anomalous exam-
+ples (Bevandi´c et al., 2018; Geifman & El-Yaniv, 2019; Malinin & Gales, 2018; Mohseni et al.,
+2020; Subramanya et al., 2017). A loss function is used to force the predictive distribution of OOD
+samples toward a uniform distribution (Lee et al., 2017). Recently, (Mohseni et al., 2020) explore
+training by adding a background class for an OOD score. (Chen et al., 2020) propose using hard
+outlier mining which improves the OOD detection performance on both clean and perturbed natural
+images. However, existing works have primarily focused on the multi-class classiﬁcation setting. We
+leave the ﬁne-tuning aspect with auxiliary data for multi-label classiﬁcation as future exploration.
+
+Generative Modeling Based Out-of-distribution Detection. Generative models (Dinh et al., 2016;
+Kingma & Welling, 2013; Rezende et al., 2014; Van den Oord et al., 2016; Tabak & Turner,
+2013) can be alternative approaches for detecting OOD examples, as they directly estimate the
+in-distribution density and can declare a test sample to be out-of-distribution if it lies in the low-
+density regions. However, as shown by (Nalisnick et al., 2018), deep generative models can assign a
+high likelihood to out-of-distribution data. Deep generative models can be more effective for out-of-
+distribution detection using improved metrics (Choi & Jang, 2018), including likelihood ratio (Ren
+et al., 2019; Serr`a et al., 2019). Though our work is based on discriminative classiﬁcation models,
+we show that label-wise energy scores can be theoretically interpreted from a data density perspec-
+tive. More importantly, generative based models (Hinz et al., 2019) can be prohibitively challenging
+to train and optimize, especially on large and complex multi-label datasets that we considered (e.g.,
+MS-COCO, NUS-WIDE etc). In contrast, our method relies on a discriminative multi-label classi-
+ﬁer, which can be much easier to optimize using standard SGD.
+
+Energy-based learning Energy-based machine learning models date back to Boltzmann ma-
+chines (Ackley et al., 1985; Salakhutdinov & Larochelle, 2010). Energy-based learning (LeCun
+et al., 2006; Ranzato et al., 2007a;b) provides a uniﬁed framework for many probabilistic and non-
+probabilistic approaches to learning. Recent work (Zhao et al., 2019) also demonstrated using energy
+functions to train GANs (Goodfellow et al., 2014), where the discriminator uses energy values to
+differentiate between real and generated images. Xie et al. (2016) ﬁrst showed that a discriminative
+classiﬁer can be interpreted from an energy-based perspective. Subsequent works (Xie et al., 2017;
+2019; 2018b;a) explored video generation, 3D shape pattern generation, and text generation (Deng
+et al., 2019) through EBMs. Energy-based methods are also used in structure prediction (Belanger &
+McCallum, 2016; Tu & Gimpel, 2018). Grathwohl et al. (2019) showed that a discriminative classi-
+ﬁer can be interpreted from an energy-based perspective. The proposed JEM optimization objective
+estimates the joint distribution p(x, y) from a generative perspective, which requires estimating the
+normalized densities and can be intractable and unstable to compute. Liu et al. (2020) propose to use
+energy score for OOD detection that is derived from a pure discriminatively trained classiﬁer, which
+demonstrated superior performance for multi-class classiﬁcation networks. In contrast, our work
+focuses on a multi-label setting, where we contribute aggregation methods that utilize information
+jointly from across all labels.
+
+5 CONCLUSION
+
+In this work, we propose energy scores for OOD detection in the multi-label classiﬁcation setting.
+We show that aggregating energies over all labels into SumEnergy results in better discrimination
+between in-distribution and OOD inputs compared to using information from only one label’s in-
+formation (i.e. MaxLogit, MSP, ODIN, or Mahalanobis). Additionally, we justify the mathematical
+interpretation of SumEnergy from a joint likelihood perspective. SumEnergy obtains better OOD de-
+tection performance compared to competitive baseline methods, establishing new state-of-the-art on
+this task. Applications of multi-label classiﬁcation can beneﬁt from our methods, and we anticipate
+further research in OOD detection to extend this work. We hope our work will increase the attention
+toward a broader view of OOD uncertainty estimation from an energy-based perspective.
+
+9
+
+Under review as a conference paper at ICLR 2021
+
+REFERENCES
+
+David H Ackley, Geoffrey E Hinton, and Terrence J Sejnowski. A learning algorithm for boltzmann
+
+machines. Cognitive science, 9(1):147–169, 1985.
+
+David Belanger and Andrew McCallum. Structured prediction energy networks. In International
+
+Conference on Machine Learning, pp. 983–992, 2016.
+
+Petra Bevandi´c, Ivan Kreˇso, Marin Orˇsi´c, and Siniˇsa ˇSegvi´c. Discriminative out-of-distribution
+
+detection for semantic segmentation. arXiv preprint arXiv:1808.07703, 2018.
+
+Markus M Breunig, Hans-Peter Kriegel, Raymond T Ng, and J¨org Sander. Lof: identifying density-
+In Proceedings of the 2000 ACM SIGMOD international conference on
+
+based local outliers.
+Management of data, pp. 93–104, 2000.
+
+Tianshi Cao, Chinwei Huang, David Yu-Tung Hui, and Joseph Paul Cohen. A benchmark of medical
+
+out of distribution detection. arXiv preprint arXiv:2007.04250, 2020.
+
+Jiefeng Chen, Yixuan Li, Xi Wu, Yingyu Liang, and Somesh Jha. Robust out-of-distribution detec-
+
+tion via informative outlier mining. arXiv preprint arXiv:2006.15207, 2020.
+
+Long Chen, Wujing Zhan, Wei Tian, Yuhang He, and Qin Zou. Deep integration: A multi-label
+architecture for road scene recognition. IEEE Transactions on Image Processing, 28(10):4883–
+4898, 2019a.
+
+Tianshui Chen, Zhouxia Wang, Guanbin Li, and Liang Lin. Recurrent attentional reinforcement
+
+learning for multi-label image recognition. arXiv preprint arXiv:1712.07465, 2017.
+
+Tianshui Chen, Muxin Xu, Xiaolu Hui, Hefeng Wu, and Liang Lin. Learning semantic-speciﬁc
+graph representation for multi-label image recognition. In Proceedings of the IEEE International
+Conference on Computer Vision, pp. 522–531, 2019b.
+
+Zhao-Min Chen, Xiu-Shen Wei, Peng Wang, and Yanwen Guo. Multi-label image recognition with
+graph convolutional networks. In Proceedings of the IEEE Conference on Computer Vision and
+Pattern Recognition, pp. 5177–5186, 2019c.
+
+Hyunsun Choi and Eric Jang. Generative ensembles for robust anomaly detection. 2018.
+
+Tat-Seng Chua, Jinhui Tang, Richang Hong, Haojie Li, Zhiping Luo, and Yan-Tao Zheng. Nus-
+wide: A real-world web image database from national university of singapore. In Proc. of ACM
+Conf. on Image and Video Retrieval (CIVR’09), Santorini, Greece., 2009.
+
+M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, , and A. Vedaldi. Describing textures in the wild. In
+Proceedings of the IEEE Conf. on Computer Vision and Pattern Recognition (CVPR), 2014a.
+
+Mircea Cimpoi, Subhransu Maji, Iasonas Kokkinos, Sammy Mohamed, and Andrea Vedaldi. De-
+scribing textures in the wild. In Proceedings of the IEEE Conference on Computer Vision and
+Pattern Recognition, pp. 3606–3613, 2014b.
+
+Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and Li Fei-Fei. Imagenet: A large-scale hi-
+erarchical image database. In 2009 IEEE conference on computer vision and pattern recognition,
+pp. 248–255. Ieee, 2009.
+
+Yuntian Deng, Anton Bakhtin, Myle Ott, Arthur Szlam, and Marc’Aurelio Ranzato. Residual
+In International Conference on Learning Represen-
+
+energy-based models for text generation.
+tations, 2019.
+
+Terrance DeVries and Graham W Taylor. Learning conﬁdence for out-of-distribution detection in
+
+neural networks. arXiv preprint arXiv:1802.04865, 2018.
+
+Laurent Dinh, Jascha Sohl-Dickstein, and Samy Bengio. Density estimation using real nvp. arXiv
+
+preprint arXiv:1605.08803, 2016.
+
+10
+
+Under review as a conference paper at ICLR 2021
+
+M. Everingham, S. M. A. Eslami, L. Van Gool, C. K. I. Williams, J. Winn, and A. Zisserman. The
+pascal visual object classes challenge: A retrospective. International Journal of Computer Vision,
+111(1):98–136, January 2015.
+
+Yonatan Geifman and Ran El-Yaniv. Selectivenet: A deep neural network with an integrated reject
+
+option. arXiv preprint arXiv:1901.09192, 2019.
+
+Yunchao Gong, Yangqing Jia, Thomas Leung, Alexander Toshev, and Sergey Ioffe. Deep convolu-
+
+tional ranking for multilabel image annotation. arXiv preprint arXiv:1312.4894, 2013.
+
+Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair,
+Aaron Courville, and Yoshua Bengio. Generative adversarial nets. In Advances in neural infor-
+mation processing systems, pp. 2672–2680, 2014.
+
+Will Grathwohl, Kuan-Chieh Wang, Joern-Henrik Jacobsen, David Duvenaud, Mohammad Norouzi,
+and Kevin Swersky. Your classiﬁer is secretly an energy based model and you should treat it like
+one. In International Conference on Learning Representations, 2019.
+
+Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+
+Identity mappings in deep residual
+
+networks. In European conference on computer vision, pp. 630–645. Springer, 2016.
+
+Matthias Hein, Maksym Andriushchenko, and Julian Bitterwolf. Why relu networks yield high-
+conﬁdence predictions far away from the training data and how to mitigate the problem.
+In
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp. 41–50,
+2019.
+
+Dan Hendrycks and Kevin Gimpel. A baseline for detecting misclassiﬁed and out-of-distribution
+
+examples in neural networks. arXiv preprint arXiv:1610.02136, 2016.
+
+Dan Hendrycks, Steven Basart, Mantas Mazeika, Mohammadreza Mostajabi, Jacob Steinhardt, and
+Dawn Song. A benchmark for anomaly segmentation. arXiv preprint arXiv:1911.11132, 2019.
+
+Tobias Hinz, Stefan Heinrich, and Stefan Wermter. Generating multiple objects at spatially distinct
+
+locations. arXiv preprint arXiv:1901.00686, 2019.
+
+Yen-Chang Hsu, Yilin Shen, Hongxia Jin, and Zsolt Kira. Generalized odin: Detecting out-
+In Proceedings of the
+
+of-distribution image without learning from out-of-distribution data.
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 10951–10960, 2020.
+
+Gao Huang, Zhuang Liu, Laurens Van Der Maaten, and Kilian Q Weinberger. Densely connected
+convolutional networks. In Proceedings of the IEEE conference on computer vision and pattern
+recognition, pp. 4700–4708, 2017.
+
+Diederik P Kingma and Jimmy Ba. Adam: A method for stochastic optimization. arXiv preprint
+
+arXiv:1412.6980, 2014.
+
+Diederik P Kingma and Max Welling. Auto-encoding variational bayes.
+
+arXiv preprint
+
+arXiv:1312.6114, 2013.
+
+Balaji Lakshminarayanan, Alexander Pritzel, and Charles Blundell. Simple and scalable predic-
+tive uncertainty estimation using deep ensembles. In Advances in neural information processing
+systems, pp. 6402–6413, 2017.
+
+Yann LeCun, Sumit Chopra, Raia Hadsell, M Ranzato, and F Huang. A tutorial on energy-based
+
+learning. Predicting structured data, 1(0), 2006.
+
+Kimin Lee, Honglak Lee, Kibok Lee, and Jinwoo Shin. Training conﬁdence-calibrated classiﬁers
+
+for detecting out-of-distribution samples. arXiv preprint arXiv:1711.09325, 2017.
+
+Kimin Lee, Kibok Lee, Honglak Lee, and Jinwoo Shin. A simple uniﬁed framework for detecting
+out-of-distribution samples and adversarial attacks. In Advances in Neural Information Process-
+ing Systems, pp. 7167–7177, 2018.
+
+11
+
+Under review as a conference paper at ICLR 2021
+
+Shiyu Liang, Yixuan Li, and Rayadurgam Srikant. Enhancing the reliability of out-of-distribution
+image detection in neural networks. In 6th International Conference on Learning Representations,
+ICLR 2018, 2018.
+
+Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays, Pietro Perona, Deva Ramanan, Piotr
+In European
+
+Doll´ar, and C Lawrence Zitnick. Microsoft coco: Common objects in context.
+conference on computer vision, pp. 740–755. Springer, 2014.
+
+Fei Tony Liu, Kai Ming Ting, and Zhi-Hua Zhou. Isolation forest. In 2008 Eighth IEEE Interna-
+
+tional Conference on Data Mining, pp. 413–422. IEEE, 2008.
+
+Weitang Liu, Xiaoyun Wang, John Owens, and Yixuan Li. Energy-based out-of-distribution detec-
+
+tion. Advances in Neural Information Processing Systems, 2020.
+
+Andrey Malinin and Mark Gales. Predictive uncertainty estimation via prior networks. In Advances
+
+in Neural Information Processing Systems, pp. 7047–7058, 2018.
+
+Sina Mohseni, Mandar Pitale, JBS Yadawa, and Zhangyang Wang. Self-supervised learning for
+
+generalizable out-of-distribution detection. 2020.
+
+Eric Nalisnick, Akihiro Matsukawa, Yee Whye Teh, Dilan Gorur, and Balaji Lakshminarayanan. Do
+deep generative models know what they don’t know? arXiv preprint arXiv:1810.09136, 2018.
+
+Jinseok Nam, Jungi Kim, Eneldo Loza Menc´ıa, Iryna Gurevych, and Johannes F¨urnkranz. Large-
+scale multi-label text classiﬁcation—revisiting neural networks. In Joint european conference on
+machine learning and knowledge discovery in databases, pp. 437–452. Springer, 2014.
+
+Marc’Aurelio Ranzato, Christopher Poultney, Sumit Chopra, and Yann L Cun. Efﬁcient learning of
+sparse representations with an energy-based model. In Advances in neural information processing
+systems, pp. 1137–1144, 2007a.
+
+Marc’Aurelio Ranzato, Y-Lan Boureau, Sumit Chopra, and Yann LeCun. A uniﬁed energy-based
+framework for unsupervised learning. In Artiﬁcial Intelligence and Statistics, pp. 371–379, 2007b.
+
+Jie Ren, Peter J Liu, Emily Fertig, Jasper Snoek, Ryan Poplin, Mark Depristo, Joshua Dillon, and
+In Advances in
+
+Balaji Lakshminarayanan. Likelihood ratios for out-of-distribution detection.
+Neural Information Processing Systems, pp. 14680–14691, 2019.
+
+Danilo Jimenez Rezende, Shakir Mohamed, and Daan Wierstra. Stochastic backpropagation and
+
+approximate inference in deep generative models. arXiv preprint arXiv:1401.4082, 2014.
+
+Ruslan Salakhutdinov and Hugo Larochelle. Efﬁcient learning of deep boltzmann machines.
+
+In
+Proceedings of the thirteenth international conference on artiﬁcial intelligence and statistics, pp.
+693–700, 2010.
+
+Joan Serr`a, David ´Alvarez, Vicenc¸ G´omez, Olga Slizovskaia, Jos´e F N´u˜nez, and Jordi Luque. In-
+put complexity and out-of-distribution detection with likelihood-based generative models. arXiv
+preprint arXiv:1909.11480, 2019.
+
+Akshayvarun Subramanya, Suraj Srinivas, and R Venkatesh Babu. Conﬁdence estimation in deep
+
+neural networks via density modelling. arXiv preprint arXiv:1707.07013, 2017.
+
+Esteban G Tabak and Cristina V Turner. A family of nonparametric density estimation algorithms.
+
+Communications on Pure and Applied Mathematics, 66(2):145–164, 2013.
+
+Grigorios Tsoumakas and Ioannis Katakis. Multi-label classiﬁcation: An overview. International
+
+Journal of Data Warehousing and Mining (IJDWM), 3(3):1–13, 2007.
+
+Lifu Tu and Kevin Gimpel. Learning approximate inference networks for structured prediction. In
+
+International Conference on Learning Representations, 2018.
+
+Aaron Van den Oord, Nal Kalchbrenner, Lasse Espeholt, Oriol Vinyals, Alex Graves, et al. Con-
+ditional image generation with pixelcnn decoders. In Advances in neural information processing
+systems, pp. 4790–4798, 2016.
+
+12
+
+Under review as a conference paper at ICLR 2021
+
+Jiang Wang, Yi Yang, Junhua Mao, Zhiheng Huang, Chang Huang, and Wei Xu. Cnn-rnn: A
+uniﬁed framework for multi-label image classiﬁcation. In Proceedings of the IEEE conference on
+computer vision and pattern recognition, pp. 2285–2294, 2016.
+
+Xiaosong Wang, Yifan Peng, Le Lu, Zhiyong Lu, Mohammadhadi Bagheri, and Ronald M Sum-
+mers. Chestx-ray8: Hospital-scale chest x-ray database and benchmarks on weakly-supervised
+classiﬁcation and localization of common thorax diseases. In Proceedings of the IEEE conference
+on computer vision and pattern recognition, pp. 2097–2106, 2017.
+
+Guoqiang Wu and Jun Zhu. Multi-label classiﬁcation: do hamming loss and subset accuracy really
+
+conﬂict with each other? Advances in Neural Information Processing Systems, 33, 2020.
+
+Jianwen Xie, Yang Lu, Song-Chun Zhu, and Yingnian Wu. A theory of generative convnet.
+
+In
+
+International Conference on Machine Learning, pp. 2635–2644, 2016.
+
+Jianwen Xie, Song-Chun Zhu, and Ying Nian Wu. Synthesizing dynamic patterns by spatial-
+In Proceedings of the ieee conference on computer vision and
+
+temporal generative convnet.
+pattern recognition, pp. 7093–7101, 2017.
+
+Jianwen Xie, Yang Lu, Ruiqi Gao, Song-Chun Zhu, and Ying Nian Wu. Cooperative training of de-
+scriptor and generator networks. IEEE transactions on pattern analysis and machine intelligence,
+42(1):27–45, 2018a.
+
+Jianwen Xie, Zilong Zheng, Ruiqi Gao, Wenguan Wang, Song-Chun Zhu, and Ying Nian Wu.
+Learning descriptor networks for 3d shape synthesis and analysis. In Proceedings of the IEEE
+conference on computer vision and pattern recognition, pp. 8629–8638, 2018b.
+
+Jianwen Xie, Song-Chun Zhu, and Ying Nian Wu. Learning energy-based spatial-temporal gener-
+ative convnets for dynamic patterns. IEEE transactions on pattern analysis and machine intelli-
+gence, 2019.
+
+Junbo Zhao, Michael Mathieu, and Yann LeCun. Energy-based generative adversarial networks. In
+
+5th International Conference on Learning Representations, ICLR 2017, 2019.
+
+Feng Zhu, Hongsheng Li, Wanli Ouyang, Nenghai Yu, and Xiaogang Wang. Learning spatial reg-
+ularization with image-level supervisions for multi-label image classiﬁcation. In Proceedings of
+the IEEE Conference on Computer Vision and Pattern Recognition, pp. 5513–5522, 2017.
+
+13
+
+Under review as a conference paper at ICLR 2021
+
+A APPENDIX
+
+A.1 EVALUATION ON DIFFERENT ARCHITECTURE
+
+We provide additional evaluation results for ResNet (He et al., 2016). The classiﬁers have a ResNet-
+101 backbone architecture, but with a ﬁnal layer that is replaced by 2 fully connected layers. Each
+classiﬁer is pre-trained on ImageNet-1K and then ﬁne-tuned with the logistic sigmoid function to
+its corresponding multi-label dataset. We use the same training settings as in the main paper. After
+training, the mAP is 87.73% for PASCAL-VOC, 72.77% for MS-COCO, and 61.47% for NUS-
+WIDE.
+
+In Table 3, we show the performance comparison of various OOD detection approaches, evaluated
+on ImageNet as the OOD test set. The ablation of applying summation over baseline methods is
+provided in Table 4.
+
+Din
+
+MS-COCO
+
+PASCAL-VOC
+
+NUS-WIDE
+
+OOD Score
+
+Aggregation
+
+Logit
+Prob
+MSP
+ODIN
+Mahalanobis
+LOF
+Isolation Forest
+
+Energy
+(ours)
+
+Max
+Max
+Max
+Max
+Max
+-
+-
+
+Max
+Sum
+
+FPR95 / AUROC / AUPR
+↑
+
+↑
+
+↓
+
+34.54 / 90.93 / 94.30
+34.54 / 90.93 / 94.30
+77.92 / 72.43 / 84.34
+34.58 / 90.26 / 93.69
+94.04 / 49.49 / 70.71
+74.30 / 74.87 / 85.82
+99.06 / 37.59 / 63.43
+
+36.32 / 91.04 / 82.68
+36.32 / 91.04 / 82.68
+69.85 / 78.24 / 67.93
+36.32 / 91.04 / 82.68
+78.02 / 70.93 / 59.84
+76.71 / 67.54 / 55.35
+98.64 / 41.94 / 33.50
+
+58.05 / 83.07 / 94.21
+58.05 / 83.07 / 94.21
+88.75 / 59.19 / 86.40
+58.05 / 83.07 / 94.21
+61.33 / 83.75 / 95.15
+85.42 / 69.37 / 90.36
+96.59 / 50.75 / 82.91
+
+34.54 / 90.93 / 94.30
+31.51 / 92.68 / 96.15
+
+36.32 / 91.04 / 82.68
+31.96 / 92.32 / 86.87
+
+58.05 / 83.07 / 94.21
+50.25 / 88.12 / 96.34
+
+Table 3: OOD detection performance comparison using energy-based approaches vs. competitive baselines.
+We use ResNet (He et al., 2016) to train on the in-distribution datasets. We use a subset of ImageNet classes as
+OOD test data, as described in Section 3.1. All values are percentages. ↑ indicates larger values are better, and
+↓ indicates smaller values are better. Bold numbers are superior results.
+
+Din
+
+MS-COCO
+
+PASCAL
+
+NUS-WIDE
+
+OOD Score
+
+Aggregation
+
+Logit
+Prob
+ODIN
+Mahalanobis
+LOF
+Isolation Forest
+
+Energy
+
+Sum
+Sum
+Sum
+Sum
+Sum
+Sum
+
+Sum
+
+FPR95 / AUROC / AUPR
+↑
+
+↓
+
+↑
+
+95.63 / 53.52 / 73.25
+43.69 / 87.21 / 93.14
+43.69 / 87.21 / 93.14
+94.47 / 46.82 / 67.06
+N/A
+N/A
+
+96.36 / 49.44 / 43.07
+35.97 / 84.68 / 76.61
+53.77 / 74.50 / 67.15
+78.56 / 70.84 / 59.34
+N/A
+N/A
+
+96.49 / 49.83 / 81.78
+55.86 / 82.97 / 94.92
+55.24 / 81.84 / 94.59
+62.79 / 83.19 / 94.96
+N/A
+N/A
+
+31.51 / 92.68 / 96.15
+
+31.96 / 92.32 / 86.87
+
+50.25 / 88.12 / 96.34
+
+Table 4: Ablation study on the effect of aggregation methods for prior approaches. We use ResNet (He et al.,
+2016) to train on the in-distribution datasets. We use ImageNet as OOD test data as described in Section 3.1.
+Note that Sum is not applicable to tree-based or KNN-based approaches (e.g., LOF and Isolation Forest).
+
+A.2 EVALUATION ON DIFFERENT OOD TEST DATA
+
+In addition to ImageNet, we also evaluate on a different OOD test dataset, Textures (Cimpoi et al.,
+2014a). The results are reported in Table 5 and Table 6.
+
+A.3 BASELINE METHODS
+
+In multi-label classiﬁcation, the prediction for each label yi with i ∈ {1, 2, ..., K} is independently
+made by a binary logistic classiﬁer:
+
+p(yi | x) =
+
+efyi (x)
+1 + efyi (x)
+
+.
+
+14
+
+Under review as a conference paper at ICLR 2021
+
+Din
+
+MS-COCO
+
+PASCAL
+
+NUS-WIDE
+
+OOD Score
+
+Aggregation
+
+Logit
+Prob
+MSP
+ODIN
+Mahalanobis
+LOF
+Isolation Forest
+
+Energy
+(ours)
+
+Max
+Max
+Max
+Max
+Max
+-
+-
+
+Max
+Sum
+
+FPR95 / AUROC / AUPR
+↑
+
+↓
+
+↑
+
+14.63 / 96.10 / 99.32
+14.63 / 96.10 / 99.32
+60.82 / 83.70 / 97.05
+12.22 / 96.18 / 99.29
+44.61 / 85.71 / 97.41
+70.16 / 74.73 / 94.96
+95.55 / 53.21 / 90.45
+
+12.36 / 96.22 / 96.97
+12.36 / 96.22 / 96.97
+41.81 / 89.76 / 93.00
+12.36 / 96.22 / 96.97
+19.17 / 96.23 / 97.90
+89.49 / 60.37 / 76.70
+99.59 / 20.89 / 50.11
+
+38.46 / 87.42 / 97.19
+38.46 / 87.42 / 97.19
+83.09 / 63.41 / 92.48
+38.46 / 87.42 / 97.19
+36.19 / 91.36 / 98.52
+64.27 / 78.23 / 95.94
+93.07 / 51.01 / 89.17
+
+14.63 / 96.10 / 99.32
+12.82 / 96.84 / 99.54
+
+12.36 / 96.22 / 96.97
+10.87 / 96.78 / 97.87
+
+38.46 / 87.42 / 97.19
+31.68 / 92.43 / 98.65
+
+Table 5: Texture as OOD data. We use ResNet (He et al., 2016) to train on the in-distribution datasets. All
+values are percentages. ↑ indicates larger values are better, and ↓ indicates smaller values are better. Bold
+numbers are superior results.
+
+Din
+
+MS-COCO
+
+PASCAL
+
+NUS-WIDE
+
+OOD Score
+
+Aggregation
+
+Logit
+Prob
+ODIN
+Mahalanobis
+LOF
+Isolation Forest
+
+Energy
+
+Sum
+Sum
+Sum
+Sum
+Sum
+Sum
+
+Sum
+
+FPR95 / AUROC / AUPR
+↑
+
+↓
+
+↑
+
+95.63 / 53.52 / 73.25
+43.69 / 87.21 / 93.14
+43.69 / 87.21 / 93.14
+45.62 / 84.34 / 97.02
+N/A
+N/A
+
+96.36 / 49.44 / 43.07
+35.97 / 84.68 / 76.61
+53.77 / 74.50 / 67.15
+19.45 / 96.09 / 97.80
+N/A
+N/A
+
+92.38 / 52.72 / 89.21
+34.88 / 90.76 / 98.57
+35.27 / 89.36 / 98.31
+37.55 / 91.04 / 98.47
+N/A
+N/A
+
+12.82 / 96.84 / 99.54
+
+10.87 / 96.78 / 97.87
+
+31.68 / 92.43 / 98.65
+
+Table 6: Ablation study on the effect of aggregation methods for prior approaches. We use ResNet (He et al.,
+2016) to train on the in-distribution datasets. We use Texture (Cimpoi et al., 2014a) as OOD test data as
+described in Section 3.1. Note that Sum is not applicable to tree-based or KNN-based approaches (e.g., LOF
+and Isolation Forest).
+
+We consider the following baselines methods under maximum aggregation:
+
+MaxLogit = max
+
+i
+
+fyi(x)
+
+MaxProb = max
+
+i
+
+p(yi | x) = max
+
+i
+
+efyi (x)
+1 + efyi (x)
+
+MSP = max
+
+i
+
+ODIN = max
+
+i
+
+Mahalanobis = max
+
+i
+
+(cid:80)K
+
+efyi (x)
+j efyj (x)
+efyi (ˆx)/T
+1 + efyi (ˆx)/T
+−(φ(ˆx) − ˆµyi)T ˆΣ−1(φ(ˆx) − ˆµyi)
+
+(18)
+
+(19)
+
+(20)
+
+(21)
+
+(22)
+
+In particular, ODIN was originally designed for multi-class but we adapt for the multi-label case
+by taking the maximum of calibrated label-wise predictions. The input perturbation is calculated
+using ˆx = x − (cid:15)sign(−∇(cid:96)ˆyi), where (cid:96)ˆyi is the binary cross-entropy loss for the label ˆyi with the
+largest output, i.e., ˆyi = arg maxi p(yi = 1 | x). For Mahalanobis distance,we extract the feature
+embedding φ(x) for a given sample. ˆµyi is the class conditional mean for label yi, and ˆΣ−1 is the
+covariant matrix.
+
+A.4 VALIDATION DATA FOR BASELINES
+
+We use a combination of the following validation datasets to select hyperparameters for ODIN
+(Liang et al., 2018) and Mahalanobis (Lee et al., 2018). The validation set consists of:
+
+15
+
+Under review as a conference paper at ICLR 2021
+
+• Gaussian noise sampled i.i.d. from an isotropic Gaussian distribution;
+• uniform noise where each pixel is sampled from U = [−1, 1];
+• In-distribution data corrupted into OOD data by applying (1) pixel-wise arithmetic mean of
+random pair of in-distribution images; (2) geometric mean of random pair of in-distribution
+images; and (3) randomly permuting 16 equally sized patches of an in-distribution image.
+
+A.5 HYPERPARAMETER TUNING FOR BASELINES
+
+ODIN (Liang et al., 2018) and Mahalanobis (Lee et al., 2018) require hyper-parameter tuning, such
+as temperature and magnitude of noise (cid:15). We use the validation data above for selecting the optimal
+hyperparameters. For ODIN, temperature T is chosen from [1,10,100,1000] and the perturbation
+magnitude (cid:15) is chosen from 21 evenly spaced numbers starting from 0 and ending at 0.004. For
+Mahalanobis, the perturbation magnitude (cid:15) is chosen from [0, 0.0005, 0.0014, 0.001, 0.002, 0.005].
+The optimal parameters are chosen to minimize the FPR at TPR95 on the validation set.
+
+16
+
