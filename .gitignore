@@ -3,3 +3,4 @@ __pycache__/
 /00_data_collection/data/manuscript_pdfs
 .env
 01_synthetic_review_generation/generate_reviews/outputs/
+fast-detect-gpt/

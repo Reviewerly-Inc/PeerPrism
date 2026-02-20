@@ -1,6 +1,6 @@
 #!/bin/bash
 # Flatten PeerPrism data for baseline/detector scripts.
-# Run from repository root (parent of PeerPrism). Output: PeerPrism/data/baselines/flattened_data/
+# Run from PeerPrism repo root (or call with path to this script). Output: data/baselines/flattened_data/
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

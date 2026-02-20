@@ -1,0 +1,15 @@
+# Fast-DetectGPT deps for Python 3.12 (prebuilt wheels; no Rust needed).
+# After cloning fast-detect-gpt, from repo root:
+#   pip install -r 03_baselines/requirements-fast-detect-gpt-py312.txt && pip install scipy
+# Original fast-detect-gpt/requirements.txt pins transformers==4.28.1, which pulls
+# tokenizers without a Python 3.12 wheel (builds from source and requires Rust).
+
+torch
+numpy
+transformers>=4.36.0,<4.46
+tokenizers>=0.19.0
+datasets>=2.14.0
+matplotlib
+tqdm
+openai
+nltk
