@@ -19,7 +19,7 @@ fi
 run_one() {
   local base="$1"
   echo "--- Fast-DetectGPT: $base ---"
-  python3 "$SCRIPT_DIR/01_run_fast_detect_gpt.py" \
+  "$PYTHON" "$SCRIPT_DIR/01_run_fast_detect_gpt.py" \
     --input "$FLAT/${base}_flat.jsonl" \
     --output "$OUT/${base}.jsonl" \
     --sampling_model llama3-8b \
