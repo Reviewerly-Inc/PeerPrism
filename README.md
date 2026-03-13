@@ -4,7 +4,9 @@ Steps and data to reproduce the PeerPrism paper: human and synthetic peer review
 
 PeerPrism is a benchmark for **idea–text provenance disentanglement** in peer review. Rather than treating authorship as binary (human vs. AI), it explicitly separates **idea provenance** (who contributed the evaluative reasoning) from **text provenance** (who wrote or rewrote the surface form), covering fully human, fully LLM, and multiple hybrid regimes. We use this dataset to study how existing LLM detectors behave in realistic review-writing workflows and to diagnose when they conflate stylistic signals with intellectual contribution.
 
-![PeerPrism overview](static/prism.png)
+<p align="center">
+  <img src="static/prism.png" alt="PeerPrism overview" width="600">
+</p>
 
 ## Pipeline (run in order)
 
